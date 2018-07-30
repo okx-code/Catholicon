@@ -19,7 +19,7 @@ defmodule Catholicon do
       |> Enum.join()
     end
     code = String.replace_trailing(code, "\n", "")
-
+String
     {result, _leftover} = eval(code)
     if !options[:silent] do
       if options[:literal] do
@@ -42,8 +42,8 @@ defmodule Catholicon do
         {result, leftover}
       true ->
         {fun_name, args} = String.next_grapheme(code)
-        IO.inspect fun_name, label: "fun_name"
-        IO.inspect args, label: "args"
+        debug fun_name, "fun_name"
+        debug args, "args"
         fun = %{
           " " => fn x -> x end,
           "#" => fn x -> fn -> x end end,
@@ -58,8 +58,16 @@ defmodule Catholicon do
             {_, result} = String.next_grapheme(to_string(x))
             result
           end
+          "Ḣ" => fn x -> 0..to_integer(x) end,
+          "İ" => fn x -> 1..to_integer(x) end,
+          "J̇" => fn x, y -> to_integer(x)..to_integer(y) end,
+          "=" => fn x, y -> x == y end,
+          "²" => fn x -> to_float(x)*to_float(x) end,
+          "√" => fn x -> :math.sqrt(to_float(x)) end,
+          "≠" => fn x, y -> x != y end,
+          "½" => fn -> 1/2 end
         }[fun_name]
-        case get_arity(fun) do
+        debug((case get_arity(fun) do
           2 ->
             {left_eval, left_leftover} = eval(args)
             {right_eval, right_leftover} = eval(left_leftover)
@@ -68,7 +76,7 @@ defmodule Catholicon do
             {eval, leftover} = eval(args)
             {fun.(eval), leftover}
           0 -> {fun.(), args}
-        end
+        end), "result")
     end
   end
 
@@ -101,7 +109,11 @@ defmodule Catholicon do
   end
 
   defp to_integer(x) when is_integer(x), do: x
+  defp to_integer(x) when is_float(x), do: round(x)
   defp to_integer(x) when is_binary(x), do: String.to_integer(x)
+
+  defp to_float(x) when is_integer(x), do: to_float(Integer.to_string(x))
+  defp to_float(x) when is_binary(x), do: String.to_integer(x)
 
   def debug(msg, label \\ nil) do
     if Application.get_env(:catholicon, :debug) do
