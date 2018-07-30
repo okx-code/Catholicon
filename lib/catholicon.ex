@@ -51,13 +51,13 @@ String
           "Ȧ" => fn x, y -> to_string(x) <> to_string(y) end,
           "Ḃ" => fn x, y -> [x, y] end,
           "Ċ" => fn -> get_input() end,
-          "Ḋ" => fn x -> to_integer(x) + 1 end,
+          "Ḋ" => fn x -> to_float(x) + 1 end,
           "Ė" => fn x, y -> String.to_integer(to_string(x), to_integer(y)) end,
           "Ḟ" => fn x, y -> Integer.to_string(to_integer(x), to_integer(y)) end,
           "Ġ" => fn x ->
             {_, result} = String.next_grapheme(to_string(x))
             result
-          end
+          end,
           "Ḣ" => fn x -> 0..to_integer(x) end,
           "İ" => fn x -> 1..to_integer(x) end,
           "J̇" => fn x, y -> to_integer(x)..to_integer(y) end,
