@@ -1,21 +1,23 @@
 # Catholicon
 
-**TODO: Add description**
+A functional code-golf programming language.
 
-## Installation
+## Compilation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `catholicon` to your list of dependencies in `mix.exs`:
+To compile, run
 
-```elixir
-def deps do
-  [
-    {:catholicon, "~> 0.1.0"}
-  ]
-end
-```
+    MIX_ENV=prod mix escript.build
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/catholicon](https://hexdocs.pm/catholicon).
+However, if you would like debug messages, instead run
 
+    MIX_ENV=dev mix escript.build
+
+## Usage
+
+    ./catholicon [OPTION]... FILE/CODE
+    Example: ./catholicon -eu Ċ (reads one line of input then immediately outputs it)
+
+      -e, --eval    Evaluate code given on the command line rather than reading a file
+      -u, --unicode Assume code is in unicode rather than in Catholicon's code page.
+      -s, --silent  Don't output the result of evaluation.
+      -l, --literal Output using IO.puts instead of IO.inspect

@@ -8,7 +8,7 @@ defmodule Catholicon do
     {options, args, []} = OptionParser.parse(args,
       strict: [eval: :boolean, unicode: :boolean, silent: :boolean, literal: :boolean],
       aliases: [e: :eval, u: :unicode, s: :silent, l: :literal])
-    code = if options[:eval], do: hd(args), else: File.read!(hd(args))
+    code = if options[:eval], do: Enum.join(args, " "), else: File.read!(hd(args))
     code = if options[:unicode] do
       # input is in unicode
       code
@@ -102,4 +102,11 @@ defmodule Catholicon do
 
   defp to_integer(x) when is_integer(x), do: x
   defp to_integer(x) when is_binary(x), do: String.to_integer(x)
+
+  def debug(msg, label \\ nil) do
+    if Application.get_env(:catholicon, :debug) do
+      IO.inspect(msg, label: label, charlists: :as_lists)
+    end
+    msg
+  end
 end
