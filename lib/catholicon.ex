@@ -36,7 +36,7 @@ defmodule Catholicon do
       code == "" -> {fallback_fun.(), ""}
       is_digits(code) ->
         {result, leftover} = Enum.split_while(to_charlist(code), fn char -> char >= 48 and char <= 57 end)
-        {String.to_integer(to_string(result)), to_string(leftover)}
+        {Variables.put("number", String.to_integer(to_string(result))), to_string(leftover)}
       is_quotes(code) ->
         unprefixed = String.replace_prefix(code, ~s/"/, "")
         [result, leftover] = String.split(unprefixed, ~s/"/, parts: 2)
@@ -46,47 +46,53 @@ defmodule Catholicon do
         debug fun_name, "fun_name"
         debug args, "args"
         {type, fun} = %{
-          "Ȧ" => {:normal, fn x, y -> to_string(x) <> to_string(y) end},
+          "Ȧ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> a <> b end)},
           "Ḃ" => {:normal, fn x, y -> [x, y] end},
           "Ċ" => {:normal, fn -> get_input() end},
-          "Ḋ" => {:normal, fn x -> to_float(x) + 1 end},
-          "Ė" => {:normal, fn x, y -> String.to_integer(to_string(x), to_integer(y)) end},
-          "Ḟ" => {:normal, fn x, y -> Integer.to_string(to_integer(x), to_integer(y)) end},
-          "Ġ" => {:normal, fn x ->
-            {_, result} = String.next_grapheme(to_string(x))
+          "Ḋ" => {:normal, &vectorise(to_float(&1), fn a -> a + 1 end)},
+          "Ė" => {:normal, &vectorise(to_string(&1), to_integer(&2), fn a, b -> String.to_integer(a, b) end)},
+          "Ḟ" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> Integer.to_string(a, b) end)},
+          "Ġ" => {:normal, &vectorise(to_string(&1), fn a ->
+            {_, result} = String.next_grapheme(a)
             result
-          end},
+          end)},
           "Ḣ" => {:normal, fn x -> 0..to_integer(x) end},
           "İ" => {:normal, fn x -> 1..to_integer(x) end},
           "J̇" => {:normal, fn x, y -> to_integer(x)..to_integer(y) end},
-          "K̇" => {:normal, fn x -> Enum.random(x) end},
+          "K̇" => {:normal, fn x -> Enum.random(to_list(x)) end},
           "L̇" => {:normal, fn x -> Integer.digits(to_integer(x)) end},
-          "Ṁ" => {:normal, fn x -> Integer.undigits(x) end},
-          "Ṅ" => {:normal, fn x -> Enum.sum(x) end},
-          "Ȯ" => {:normal, fn x -> Enum.reduce(x, &*/2) end},
+          "Ṁ" => {:normal, fn x -> Integer.undigits(to_list(x)) end},
+          "Ṅ" => {:normal, fn x -> Enum.sum(to_list(x)) end},
+          "Ȯ" => {:normal, fn x -> Enum.reduce(to_list(x), &*/2) end},
+          "Ṗ" => {:normal, &vectorise(to_string(&1), fn a -> String.to_integer(a, 2) end)},
+          "Q̇" => {:normal, &vectorise(to_integer(&1), fn a -> Integer.to_string(a, 2) end)},
+          "Ṙ" => {:normal, &vectorise(to_integer(&1), fn a -> rem(a, 2) == 0 end)},
+          "Ṡ" => {:normal, &vectorise(to_integer(&1), fn a -> rem(a, 2) == 1 end)},
+          "Ṫ" => {:normal, &vectorise(to_float(&1), fn a -> a - 1 end)},
 
           "A" => {:normal, fn x -> Variables.put("A", x) end},
-          "a" => {:normal, fn -> Variables.get("A") end},
+          "B" => {:normal, fn -> Variables.get("A") end},
+          "C" => {:normal, fn -> Variables.get("number") end},
 
           " " => {:normal, fn x -> x end},
           "!" => {:escape, fn x -> Loop.while_unchanging(fn acc -> eval_value(x, acc) end, &get_input/0) end},
           "#" => {:normal, fn x -> fn -> x end end},
           "$" => {:normal, fn x -> x.() end},
           "&" => {:escape, fn x -> fn -> eval_value(x) end end},
-          "%" => {:normal, &vectorise(&1, &2, fn a, b -> rem(a, b) end)},
+          "%" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> rem(a, b) end)},
           "'" => {:escape, fn x -> x end},
           # ()
-          "*" => {:normal, &vectorise(&1, &2, fn a, b -> a * b end)},
-          "+" => {:normal, &vectorise(&1, &2, fn a, b -> a + b end)},
+          "*" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a * b end)},
+          "+" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a + b end)},
           "," => {:normal, fn x -> IO.puts(x); x end},
-          "-" => {:normal, &vectorise(&1, &2, fn a, b -> a - b end)},
+          "-" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a - b end)},
           "." => {:normal, fn x -> IO.write(x); x end},
-          "/" => {:normal, &vectorise(&1, &2, fn a, b -> a / b end)},
-          ":" => {:normal, fn x, y -> x ++ y end},
-          ";" => {:normal, fn x, y -> x -- y end},
-          "<" => {:normal, &vectorise(&1, &2, fn a, b -> a < b end)},
+          "/" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a / b end)},
+          ":" => {:normal, fn x, y -> to_list(x) ++ to_list(y) end},
+          ";" => {:normal, fn x, y -> to_list(x) -- to_list(y) end},
+          "<" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a < b end)},
           "=" => {:normal, fn x, y -> x == y end},
-          ">" => {:normal, &vectorise(&1, &2, fn a, b -> a > b end)},
+          ">" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a > b end)},
           # ?A-Z[\]^_`a-z{|}
           "²" => {:normal, fn x -> to_float(x)*to_float(x) end},
           "√" => {:normal, fn x -> :math.sqrt(to_float(x)) end},
@@ -154,6 +160,10 @@ defmodule Catholicon do
   defp to_float(x) when is_integer(x), do: to_float(Integer.to_string(x))
   defp to_float(x) when is_binary(x), do: String.to_integer(x)
 
+  defp to_list(x) when is_list(x), do: x
+  defp to_list(x) when is_binary(x), do: String.graphemes(x)
+  defp to_list(x) when is_integer(x), do: Integer.digits(x)
+
   @doc """
   Vectorises x and y onto fun. x and y may be an object or a list of object,
   but the fun must take two objects and output one.
@@ -164,6 +174,13 @@ defmodule Catholicon do
   def vectorise(x, y, fun) when not(is_list(x)) and is_list(y), do: Enum.map(y, &fun.(x, &1))
   def vectorise(x, y, fun) when not(is_list(x)) and not(is_list(y)), do: fun.(x, y)
 
+  @doc """
+  Vectorises x onto fun. x may be an object or a list of object,
+  but the fun must take one object and output one.
+  """
+  def vectorise(x, fun)
+  def vectorise(x, fun) when is_list(x), do: Enum.map(x, fun)
+  def vectorise(x, fun) when not is_list(x), do: fun.(x)
 
   def debug(msg, label \\ nil) do
     if Application.get_env(:catholicon, :debug) do
