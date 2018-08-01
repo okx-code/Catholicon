@@ -63,7 +63,7 @@ defmodule Catholicon do
           "L̇" => {:normal, fn x -> Integer.digits(to_integer(x)) end},
           "Ṁ" => {:normal, fn x -> Integer.undigits(x) end},
           "Ṅ" => {:normal, fn x -> Enum.sum(x) end},
-          "Ȯ" => {:normal, fn x -> Enum.reduce(x, &*/2)}
+          "Ȯ" => {:normal, fn x -> Enum.reduce(x, &*/2) end},
 
           "A" => {:normal, fn x -> Variables.put("A", x) end},
           "a" => {:normal, fn -> Variables.get("A") end},
