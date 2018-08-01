@@ -60,6 +60,10 @@ defmodule Catholicon do
           "İ" => {:normal, fn x -> 1..to_integer(x) end},
           "J̇" => {:normal, fn x, y -> to_integer(x)..to_integer(y) end},
           "K̇" => {:normal, fn x -> Enum.random(x) end},
+          "L̇" => {:normal, fn x -> Integer.digits(to_integer(x)) end},
+          "Ṁ" => {:normal, fn x -> Integer.undigits(x) end},
+          "Ṅ" => {:normal, fn x -> Enum.sum(x) end},
+          "Ȯ" => {:normal, fn x -> Enum.reduce(x, &*/2)}
 
           "A" => {:normal, fn x -> Variables.put("A", x) end},
           "a" => {:normal, fn -> Variables.get("A") end},
@@ -91,7 +95,7 @@ defmodule Catholicon do
         }[fun_name]
         debug((case get_arity(fun) do
           2 ->
-            {left_eval, left_leftover} = do_eval(type, args, fallback_fun)
+            {left_eval, left_leftover} = do_eval(:normal, args, fallback_fun)
             {right_eval, right_leftover} = do_eval(type, left_leftover, fallback_fun)
             {fun.(left_eval, right_eval), right_leftover}
           1 ->
