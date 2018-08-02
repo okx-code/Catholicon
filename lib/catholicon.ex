@@ -46,6 +46,7 @@ defmodule Catholicon do
         {fun_name, args} = String.next_grapheme(code)
         debug fun_name, "fun_name"
         debug args, "args"
+        # TODO: map
         {type, fun} = %{
           "Ȧ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> a <> b end)},
           "Ḃ" => {:normal, fn x, y -> [x, y] end},
@@ -92,6 +93,7 @@ defmodule Catholicon do
           "C" => {:normal, fn -> Variables.get("number") end},
           "D" => {:normal, &:rand.uniform/0},
           "E" => {:normal, &:rand.normal/0},
+          "a" => {:normal, &vectorise(to_float(&1), fn a -> 1 - a end)},
 
           " " => {:normal, fn x -> x end},
           "!" => {:escape, fn x -> Loop.while_unchanging(fn acc -> eval_value(x, acc) end, &Input.get_input/0) end},
@@ -122,6 +124,7 @@ defmodule Catholicon do
           "ḟ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> String.split(a, b) end)},
           "ġ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> count_substring(a, b) end)},
           "ḣ" => {:normal, &vectorise(to_string(&1), to_integer(&2), fn a, b -> String.at(a, rem(b, String.length(a))) end)},
+          "i̇" => {:normal, fn x -> length(to_list(x)) end},
           "²" => {:normal, &vectorise(to_float(&1), fn a -> a*a end)},
           "√" => {:normal, &vectorise(to_float(&1), fn a -> :math.sqrt(a) end)},
           "≠" => {:normal, &vectorise(&1, &2, fn a, b -> a != b end)},
