@@ -3,6 +3,5 @@
 erl_crash.dump
 *.ez
 
-code\.cth
-
 catholicon
+*.cth

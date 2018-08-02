@@ -3,6 +3,7 @@ defmodule Catholicon do
 
   def main(args) do
     Variables.start_link()
+    Input.start_link()
 
     256 = String.length(@table)
     256 = length(String.graphemes(@table))
@@ -31,7 +32,7 @@ defmodule Catholicon do
     end
   end
 
-  def eval(code, fallback_fun \\ &get_input/0) do
+  def eval(code, fallback_fun \\ &Input.get_input/0) do
     cond do
       code == "" -> {fallback_fun.(), ""}
       is_digits(code) ->
@@ -48,7 +49,7 @@ defmodule Catholicon do
         {type, fun} = %{
           "Ȧ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> a <> b end)},
           "Ḃ" => {:normal, fn x, y -> [x, y] end},
-          "Ċ" => {:normal, fn -> get_input() end},
+          "Ċ" => {:normal, fn -> Input.get_input() end},
           "Ḋ" => {:normal, &vectorise(to_float(&1), fn a -> a + 1 end)},
           "Ė" => {:normal, &vectorise(to_string(&1), to_integer(&2), fn a, b -> String.to_integer(a, b) end)},
           "Ḟ" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> Integer.to_string(a, b) end)},
@@ -62,48 +63,81 @@ defmodule Catholicon do
           "K̇" => {:normal, fn x -> Enum.random(to_list(x)) end},
           "L̇" => {:normal, fn x -> Integer.digits(to_integer(x)) end},
           "Ṁ" => {:normal, fn x -> Integer.undigits(to_list(x)) end},
-          "Ṅ" => {:normal, fn x -> Enum.sum(to_list(x)) end},
-          "Ȯ" => {:normal, fn x -> Enum.reduce(to_list(x), &*/2) end},
+          "Ṅ" => {:normal, &Enum.reduce(to_list(&1), fn a, b -> to_float(a)+to_float(b) end)},
+          "Ȯ" => {:normal, &Enum.reduce(to_list(&1), fn a, b -> to_float(a)*to_float(b) end)},
           "Ṗ" => {:normal, &vectorise(to_string(&1), fn a -> String.to_integer(a, 2) end)},
           "Q̇" => {:normal, &vectorise(to_integer(&1), fn a -> Integer.to_string(a, 2) end)},
           "Ṙ" => {:normal, &vectorise(to_integer(&1), fn a -> rem(a, 2) == 0 end)},
           "Ṡ" => {:normal, &vectorise(to_integer(&1), fn a -> rem(a, 2) == 1 end)},
           "Ṫ" => {:normal, &vectorise(to_float(&1), fn a -> a - 1 end)},
+          "U̇" => {:normal, &vectorise(to_integer(&1), fn a ->
+            Integer.to_string(a, 2)
+            |> to_integer()
+            |> Integer.digits()
+            |> Enum.sum()
+          end)},
+          "V̇" => {:normal, &vectorise(to_integer(&1), to_integer(&1), fn a, b -> Integer.gcd(a, b) end)},
+          "Ẇ" => {:normal, &vectorise(to_float(&1), fn a -> abs(a) end)},
+          "Ẋ" => {:normal, &vectorise(to_float_strict(&1), fn a -> Kernel.trunc(Float.ceil(a)) end)},
+          "Ẏ" => {:normal, &vectorise(to_float_strict(&1), fn a -> Kernel.trunc(Float.floor(a)) end)},
+          "Ż" => {:normal, &vectorise(to_float_strict(&1), fn a -> round(a) end)},
+          "ȧ" => {:normal, &vectorise(to_string(&1), fn a -> String.upcase(a) end)},
+          "ḃ" => {:normal, &vectorise(to_string(&1), fn a -> String.downcase(a) end)},
+          "ċ" => {:normal, &vectorise(to_string(&1), fn a -> String.trim(a) end)},
+          "ḋ" => {:normal, &vectorise(to_float_strict(&1), fn a -> Float.ratio(a) end)},
+          "ė" => {:normal, &vectorise(to_string(&1), fn a -> [n, d] = String.split(a, "/"); to_float(n)/to_float(d) end)},
 
           "A" => {:normal, fn x -> Variables.put("A", x) end},
           "B" => {:normal, fn -> Variables.get("A") end},
           "C" => {:normal, fn -> Variables.get("number") end},
+          "D" => {:normal, &:rand.uniform/0},
+          "E" => {:normal, &:rand.normal/0},
 
           " " => {:normal, fn x -> x end},
-          "!" => {:escape, fn x -> Loop.while_unchanging(fn acc -> eval_value(x, acc) end, &get_input/0) end},
+          "!" => {:escape, fn x -> Loop.while_unchanging(fn acc -> eval_value(x, acc) end, &Input.get_input/0) end},
           "#" => {:normal, fn x -> fn -> x end end},
           "$" => {:normal, fn x -> x.() end},
           "&" => {:escape, fn x -> fn -> eval_value(x) end end},
           "%" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> rem(a, b) end)},
           "'" => {:escape, fn x -> x end},
           # ()
-          "*" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a * b end)},
-          "+" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a + b end)},
+          "*" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a * b end)},
+          "+" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a + b end)},
           "," => {:normal, fn x -> IO.puts(x); x end},
-          "-" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a - b end)},
+          "-" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a - b end)},
           "." => {:normal, fn x -> IO.write(x); x end},
-          "/" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a / b end)},
+          "/" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a / b end)},
           ":" => {:normal, fn x, y -> to_list(x) ++ to_list(y) end},
           ";" => {:normal, fn x, y -> to_list(x) -- to_list(y) end},
-          "<" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a < b end)},
-          "=" => {:normal, fn x, y -> x == y end},
-          ">" => {:normal, &vectorise(to_integer(&1), to_integer(&2), fn a, b -> a > b end)},
+          "<" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a < b end)},
+          "=" => {:normal, &vectorise(&1, &2, fn a, b -> a == b end)},
+          ">" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a > b end)},
+          "?" => {:two_char, fn x -> x end},
+          "_" => {:two_char, &vectorise(&2, fn a -> TwoChar.get_monad(&1, a) end)},
+          "`" => {:two_char, &TwoChar.get_nilad/1},
+          "{" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a <= b end)},
+          "|" => {:normal, &vectorise(&1, &2, fn a, b -> a === b end)},
+          "}" => {:normal, &vectorise(to_float(&1), to_float(&2), fn a, b -> a >= b end)},
           # ?A-Z[\]^_`a-z{|}
-          "²" => {:normal, fn x -> to_float(x)*to_float(x) end},
-          "√" => {:normal, fn x -> :math.sqrt(to_float(x)) end},
-          "≠" => {:normal, fn x, y -> x != y end},
-          "½" => {:normal, fn -> 1/2 end}
+          "ḟ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> String.split(a, b) end)},
+          "ġ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> count_substring(a, b) end)},
+          "ḣ" => {:normal, &vectorise(to_string(&1), to_integer(&2), fn a, b -> String.at(a, rem(b, String.length(a))) end)},
+          "²" => {:normal, &vectorise(to_float(&1), fn a -> a*a end)},
+          "√" => {:normal, &vectorise(to_float(&1), fn a -> :math.sqrt(a) end)},
+          "≠" => {:normal, &vectorise(&1, &2, fn a, b -> a != b end)},
+          "½" => {:normal, fn -> 1/2 end},
         }[fun_name]
         debug((case get_arity(fun) do
           2 ->
-            {left_eval, left_leftover} = do_eval(:normal, args, fallback_fun)
-            {right_eval, right_leftover} = do_eval(type, left_leftover, fallback_fun)
-            {fun.(left_eval, right_eval), right_leftover}
+            if type == :two_char do
+              {char, rest} = String.next_grapheme(args)
+              {eval, leftover} = eval(rest, fallback_fun)
+              {fun.(char, eval), leftover}
+            else
+              {left_eval, left_leftover} = do_eval(:normal, args, fallback_fun)
+              {right_eval, right_leftover} = do_eval(type, left_leftover, fallback_fun)
+              {fun.(left_eval, right_eval), right_leftover}
+            end
           1 ->
             {eval, leftover} = do_eval(type, args, fallback_fun)
             {fun.(eval), leftover}
@@ -113,13 +147,14 @@ defmodule Catholicon do
   end
 
   defp do_eval(:normal, args, fallback_fun), do: eval(args, fallback_fun)
+  defp do_eval(:two_char, args, _fallback_fun), do: String.next_grapheme(args)
   defp do_eval(:escape, args, _fallback_fun) do
     split = String.split(args, "~")
     [tl | rest] = Enum.reverse(split)
     {Enum.join(rest, "~"), tl}
   end
 
-  defp eval_value(args, fallback_fun \\ &get_input/0) do
+  defp eval_value(args, fallback_fun \\ &Input.get_input/0) do
     {value, _leftover} = eval(args, fallback_fun)
     value
   end
@@ -141,9 +176,9 @@ defmodule Catholicon do
   defp is_quotes(~s/"/ <> str) when byte_size(str) > 0, do: String.contains?(str, ~s/"/)
   defp is_quotes(_str), do: false
 
-  defp get_input(), do: convert(String.replace_trailing(IO.gets(""), "\n", ""))
+  # defp get_input(), do: convert(String.replace_trailing(IO.gets(""), "\n", ""))
 
-  defp convert(string) do
+  def convert(string) do
     try do
       {value, []} = Code.eval_string(string)
       value
@@ -152,17 +187,35 @@ defmodule Catholicon do
     end
   end
 
-  defp to_integer(x) when is_integer(x), do: x
-  defp to_integer(x) when is_float(x), do: round(x)
-  defp to_integer(x) when is_binary(x), do: String.to_integer(x)
+  def to_integer(x) when is_integer(x), do: x
+  def to_integer(x) when is_float(x), do: round(x)
+  def to_integer(x) when is_binary(x), do: String.to_integer(x)
 
-  defp to_float(x) when is_float(x), do: x
-  defp to_float(x) when is_integer(x), do: to_float(Integer.to_string(x))
-  defp to_float(x) when is_binary(x), do: String.to_integer(x)
+  def to_float_strict(x) when is_float(x), do: x
+  def to_float_strict(x) when is_integer(x), do: to_float(Integer.to_string(x))
+  def to_float_strict(x) when is_binary(x), do: String.to_float(x)
 
-  defp to_list(x) when is_list(x), do: x
-  defp to_list(x) when is_binary(x), do: String.graphemes(x)
-  defp to_list(x) when is_integer(x), do: Integer.digits(x)
+  def to_float(x) when is_float(x), do: x
+  def to_float(x) when is_integer(x), do: x
+  def to_float(x) when is_binary(x) do
+    case Integer.parse(x) do
+      {value, ""} -> value
+      _ -> do_float_parse(x)
+    end
+  end
+
+  defp do_float_parse(x) do
+    {x, ""} = Float.parse(x)
+    x
+  end
+
+  def count_substring(_, ""), do: 0
+  def count_substring(str, sub), do: length(String.split(str, sub)) - 1
+
+
+  def to_list(x) when is_list(x), do: x
+  def to_list(x) when is_binary(x), do: String.graphemes(x)
+  def to_list(x) when is_integer(x), do: Integer.digits(x)
 
   @doc """
   Vectorises x and y onto fun. x and y may be an object or a list of object,
