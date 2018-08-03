@@ -91,9 +91,13 @@ defmodule Catholicon do
           "A" => {:normal, fn x -> Variables.put("A", x) end},
           "B" => {:normal, fn -> Variables.get("A") end},
           "C" => {:normal, fn -> Variables.get("number") end},
-          "D" => {:normal, &:rand.uniform/0},
-          "E" => {:normal, &:rand.normal/0},
+          "D" => {:normal, fn -> Variables.get("loop") end},
+          "E" => {:normal, fn -> 10 end},
+          "F" => {:normal, fn -> 100 end},
+          "G" => {:normal, fn -> 1000} end,
           "a" => {:normal, &vectorise(to_float(&1), fn a -> 1 - a end)},
+          "b" => {:normal, &:rand.uniform/0},
+          "c" => {:normal, &:rand.normal/0},
 
           " " => {:normal, fn x -> x end},
           "!" => {:escape, fn x -> Loop.while_unchanging(fn acc -> eval_value(x, acc) end, &Input.get_input/0) end},
@@ -125,6 +129,9 @@ defmodule Catholicon do
           "ġ" => {:normal, &vectorise(to_string(&1), to_string(&2), fn a, b -> count_substring(a, b) end)},
           "ḣ" => {:normal, &vectorise(to_string(&1), to_integer(&2), fn a, b -> String.at(a, rem(b, String.length(a))) end)},
           "i̇" => {:normal, fn x -> length(to_list(x)) end},
+          "j̇" => {:escape, fn x, y -> Loop.decompose(to_float(x), fn value -> eval_value(y, fn -> value end) end) end},
+          "k̇" => {:normal, &vectorise(to_float(&1), fn a -> a == round(a) end)},
+          "l̇" => {:escape, fn x, y -> Loop.map(to_list(x), fn value -> eval_value(y, fn -> value end) end) end},
           "²" => {:normal, &vectorise(to_float(&1), fn a -> a*a end)},
           "√" => {:normal, &vectorise(to_float(&1), fn a -> :math.sqrt(a) end)},
           "≠" => {:normal, &vectorise(&1, &2, fn a, b -> a != b end)},
@@ -153,8 +160,12 @@ defmodule Catholicon do
   defp do_eval(:two_char, args, _fallback_fun), do: String.next_grapheme(args)
   defp do_eval(:escape, args, _fallback_fun) do
     split = String.split(args, "~")
-    [tl | rest] = Enum.reverse(split)
-    {Enum.join(rest, "~"), tl}
+    if length(split) == 1 do
+      {args, ""}
+    else
+      [tl | rest] = Enum.reverse(split)
+      {Enum.join(rest, "~"), tl}
+    end
   end
 
   defp eval_value(args, fallback_fun \\ &Input.get_input/0) do
@@ -193,10 +204,12 @@ defmodule Catholicon do
   def to_integer(x) when is_integer(x), do: x
   def to_integer(x) when is_float(x), do: round(x)
   def to_integer(x) when is_binary(x), do: String.to_integer(x)
+  def to_integer(_), do: :error
 
   def to_float_strict(x) when is_float(x), do: x
   def to_float_strict(x) when is_integer(x), do: to_float(Integer.to_string(x))
   def to_float_strict(x) when is_binary(x), do: String.to_float(x)
+  def to_float_strict(_), do: :error
 
   def to_float(x) when is_float(x), do: x
   def to_float(x) when is_integer(x), do: x
@@ -206,6 +219,7 @@ defmodule Catholicon do
       _ -> do_float_parse(x)
     end
   end
+  def to_float(_), do: :error
 
   defp do_float_parse(x) do
     {x, ""} = Float.parse(x)
@@ -219,6 +233,7 @@ defmodule Catholicon do
   def to_list(x) when is_list(x), do: x
   def to_list(x) when is_binary(x), do: String.graphemes(x)
   def to_list(x) when is_integer(x), do: Integer.digits(x)
+  def to_list(_), do: :error
 
   @doc """
   Vectorises x and y onto fun. x and y may be an object or a list of object,
