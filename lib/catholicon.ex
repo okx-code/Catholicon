@@ -155,7 +155,17 @@ defmodule Catholicon do
           "ż" => {:normal, &vectorise(to_string(&1), fn a -> Base.encode64(a) end)},
           "Ạ" => {:normal, &vectorise(to_float(&1), fn a -> a / 2 end)},
           "Ḅ" => {:normal, &vectorise(to_float(&1), fn a -> a * 2 end)},
-          "C̣" => {:normal, fn x, y -> vectorise(to_integer(x), fn a -> Enum.at(y, a))}
+          "C̣" => {:normal, fn x, y -> vectorise(to_integer(x), fn a -> Enum.at(y, a) end) end},
+          "Ḍ" => {:normal, fn x ->
+            group = group_adjacent(to_list(x))
+            case x do
+              x when is_integer(x) -> Enum.map(group, &Integer.undigits/1)
+              x when not is_list(x) -> Enum.map(group, &Enum.join(Enum.map(&1, fn a -> to_string(a) end)))
+              _ -> group
+            end
+          end},
+          "Ẹ" => {:normal, fn x -> cumulative_sum(to_list(x)) end},
+          "F̣" => {:normal, fn x -> Enum.flat_map(to_list(x), fn a -> a end) end},
           "²" => {:normal, &vectorise(to_float(&1), fn a -> a*a end)},
           "√" => {:normal, &vectorise(to_float(&1), fn a -> :math.sqrt(a) end)},
           "≠" => {:normal, &vectorise(&1, &2, fn a, b -> a != b end)},
@@ -253,6 +263,7 @@ defmodule Catholicon do
   def to_list(x) when is_list(x), do: x
   def to_list(x) when is_binary(x), do: String.graphemes(x)
   def to_list(x) when is_integer(x), do: Integer.digits(x)
+  def to_list(x) when is_float(x), do: to_list(to_string(x))
   def to_list(_), do: :error
 
   def count_substring(_, ""), do: 0
@@ -262,8 +273,26 @@ defmodule Catholicon do
   defp do_factorial(0, f), do: f
   defp do_factorial(n, f), do: do_factorial(n-1, f*n)
 
+  def group_adjacent(group) do
+    Enum.chunk_while(group, [], fn i, chunk ->
+      if length(chunk) == 0 or hd(chunk) == i do
+        {:cont, chunk ++ [i]}
+      else
+        {:cont, chunk, [i]}
+      end
+    end, fn x -> {:cont, x, []} end)
+  end
+
   def lcm(0, 0), do: 0
   def lcm(a, b), do: abs(Kernel.div(a * b, Integer.gcd(a, b)))
+
+  def cumulative_sum(enum) do
+    if Enum.all?(enum, &is_list/1) do
+      Enum.map(enum, &cumulative_sum/1)
+    else
+      Enum.scan(enum, &+/2)
+    end
+  end
 
   @doc """
   Vectorises x and y onto fun. x and y may be an object or a list of object,
