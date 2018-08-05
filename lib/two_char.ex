@@ -29,7 +29,8 @@ defmodule TwoChar do
       "Ẋ" => 3/4,
       "Ẏ" => 2/5,
       "Ż" => 3/5,
-      "ȧ" => 4/5
+      "ȧ" => 4/5,
+      "ḃ" => 16
     }[char]
   end
 

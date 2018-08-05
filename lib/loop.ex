@@ -22,7 +22,9 @@ defmodule Loop do
     end
   end
 
-  def map(list, fun), do: Enum.map(list, fun)
+  def map(list, fun) do
+    Enum.map(list, fn x -> loop(x); fun.(x) end)
+  end
 
   defp loop(set), do: Variables.put("loop", set)
 end
