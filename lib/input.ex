@@ -19,4 +19,20 @@ defmodule Input do
       end
     end))
   end
+
+  def get_input(index) do
+    get_until(index)
+    {input, drop, stream} = Agent.get(__MODULE__, fn x -> x end)
+    IO.inspect {input, drop, stream, index}
+    Enum.at(input, rem(index, length(input)))
+  end
+
+  defp get_until(index) do
+    {input, _, stream} = Agent.get(__MODULE__, fn x -> x end)
+    if index >= length(input) and not stream do
+      IO.inspect {input, index, stream}, label: "a"
+      get_input()
+      get_until(index)
+    end
+  end
 end

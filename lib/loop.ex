@@ -14,7 +14,7 @@ defmodule Loop do
   defp do_decompose(_check, 0, _fun, decomposition), do: decomposition
   defp do_decompose(check, num, fun, decomposition) do
     loop(check)
-    if fun.(check) do
+    if Catholicon.to_boolean(fun.(check)) do
       new_num = num - check
       do_decompose(new_num, new_num, fun, decomposition ++ [check])
     else

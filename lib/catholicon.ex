@@ -106,6 +106,7 @@ defmodule Catholicon do
           "E" => {:normal, fn -> 10 end},
           "F" => {:normal, fn -> 100 end},
           "G" => {:normal, fn -> 1000 end},
+          "H" => {:normal, fn -> Input.get_input(0) end},
           "a" => {:normal, &vectorise(&1, fn a -> 1 - to_float(a) end)},
           "b" => {:normal, &:rand.uniform/0},
           "c" => {:normal, &:rand.normal/0},
@@ -119,7 +120,7 @@ defmodule Catholicon do
           "%" => {:normal, &vectorise(&1, &2, fn a, b -> rem(to_integer(a), to_integer(b)) end)},
           "'" => {:escape, fn x -> x end},
           # ()
-          "*" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) * to_float(b) end)},
+          "*" => {:normal, &vectorise(&1, &2, fn a, b -> IO.inspect(to_float(IO.inspect(a, label: "a")) * to_float(IO.inspect(b, label: "b")), label: "m") end)},
           "+" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) + to_float(b) end)},
           "," => {:normal, fn x -> IO.puts(x); x end},
           "-" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) - to_float(b) end)},
@@ -142,7 +143,7 @@ defmodule Catholicon do
           "ġ" => {:normal, &vectorise(&1, &2, fn a, b -> count_substring(to_string(a), to_string(b)) end)},
           "ḣ" => {:normal, &vectorise(&1, &2, fn a, b -> String.at(to_string(a), rem(to_integer(b), String.length(to_string(a)))) end)},
           "i̇" => {:normal, fn x -> length(to_list(x)) end},
-          "j̇" => {:escape, fn x, y -> Loop.decompose(to_float(x), fn value -> eval_value(y, fn -> value end) end) end},
+          "j̇" => {:escape, &vectorise(&1, fn a -> Loop.decompose(to_float(a), fn value -> eval_value(&2, fn -> value end) end) end)},
           "k̇" => {:normal, &vectorise(&1, fn a -> to_float(a) == round(to_float(a)) end)},
           "l̇" => {:escape, fn x, y -> Enum.map(to_list(x), fn value -> eval_value(y, fn -> value end) end) end},
           "ṁ" => {:normal, &vectorise(&1, &2, fn a, b -> String.pad_leading(to_string(a), to_integer(b)) end)},
@@ -176,6 +177,9 @@ defmodule Catholicon do
             Variables.put("loop", a)
             eval_value(y, fn -> b end)
           end) end},
+          "Ḥ" => {:normal, &vectorise(&1, fn a -> prime_factors(to_integer(a)) end)},
+          "Ị" => {:normal, &hd(&1)},
+          "J̣" => {:normal, &tl(&1)},
           "²" => {:normal, &vectorise(&1, fn a -> to_float(a)*to_float(a) end)},
           "√" => {:normal, &vectorise(&1, fn a -> :math.sqrt(to_float(a)) end)},
           "≠" => {:normal, &vectorise(&1, &2, fn a, b -> a != b end)},
@@ -200,6 +204,15 @@ defmodule Catholicon do
     end
   end
 
+  defp do_eval(:normal, "\\" <> args, fallback_fun) do
+    IO.inspect args
+    {[first, second], leftover} = do_eval(:normal, args, fallback_fun)
+    {first, {:two_arg, second, leftover}}
+  end
+  defp do_eval(_, {:two_arg, second, args}, _) do
+    IO.inspect {:two_arg, second, args}
+    {second, args}
+  end
   defp do_eval(:normal, args, fallback_fun), do: eval(args, fallback_fun)
   defp do_eval(:two_char, args, _fallback_fun), do: String.next_grapheme(args)
   defp do_eval(:escape, args, _fallback_fun) do
@@ -282,6 +295,11 @@ defmodule Catholicon do
   def to_list(x) when is_float(x), do: to_list(to_string(x))
   def to_list(_), do: :error
 
+  def to_boolean(x) when x == 1 or x == "1", do: true
+  def to_boolean(x) when x == 0 or x == "0", do: false
+  def to_boolean(x) when is_number(x) or is_binary(x), do: false
+  def to_boolean(x), do: !!x
+
   def count_substring(_, ""), do: 0
   def count_substring(str, sub), do: length(String.split(str, sub)) - 1
 
@@ -310,12 +328,17 @@ defmodule Catholicon do
     end
   end
 
+  def prime_factors(n), do: do_prime_factors(n, 2, [])
+  defp do_prime_factors(n, k, acc) when n < k*k, do: Enum.reverse(acc, [n])
+  defp do_prime_factors(n, k, acc) when rem(n, k) == 0, do: do_prime_factors(div(n, k), k, [k | acc])
+  defp do_prime_factors(n, k, acc), do: do_prime_factors(n, k+1, acc)
+
   @doc """
   Vectorises x and y onto fun. x and y may be an object or a list of object,
   but the fun must take two objects and output one.
   """
   def vectorise(x, y, fun)
-  def vectorise(x, y, fun) when is_list(x) and is_list(y), do: Enum.map(Enum.zip(x, y), fn {x, y} -> vectorise(x, y, fun) end)
+  def vectorise(x, y, fun) when is_list(x) and is_list(y), do: Enum.map(x, &vectorise(&1, y, fun))
   def vectorise(x, y, fun) when is_list(x) and not(is_list(y)), do: Enum.map(x, &vectorise(&1, y, fun))
   def vectorise(x, y, fun) when not(is_list(x)) and is_list(y), do: Enum.map(y, &vectorise(x, &1, fun))
   def vectorise(x, y, fun) when not(is_list(x)) and not(is_list(y)), do: fun.(x, y)
