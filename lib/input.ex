@@ -23,7 +23,6 @@ defmodule Input do
   def get_input(index) do
     get_until(index)
     {input, drop, stream} = Agent.get(__MODULE__, fn x -> x end)
-    IO.inspect {input, drop, stream, index}
     Enum.at(input, rem(index, length(input)))
   end
 

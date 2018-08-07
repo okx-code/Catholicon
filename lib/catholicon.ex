@@ -61,8 +61,8 @@ defmodule Catholicon do
             {_, result} = String.next_grapheme(to_string(a))
             result
           end)},
-          "Ḣ" => {:normal, &vectorise_list(&1, fn a -> Enum.to_list(0..to_integer(a)) end)},
-          "İ" => {:normal, &vectorise_list(&1, fn a -> Enum.to_list(1..to_integer(a)) end)},
+          "Ḣ" => {:normal, &vectorise(&1, fn a -> Enum.to_list(0..to_integer(a)) end)},
+          "İ" => {:normal, &vectorise(&1, fn a -> Enum.to_list(1..to_integer(a)) end)},
           "J̇" => {:normal, fn x, y -> Enum.to_list(to_integer(x)..to_integer(y)) end},
           "K̇" => {:normal, &vectorise_list(&1, fn a -> Enum.random(to_list(a)) end)},
           "L̇" => {:normal, &vectorise(&1, fn a -> Integer.digits(to_integer(a)) end)},
@@ -120,7 +120,7 @@ defmodule Catholicon do
           "%" => {:normal, &vectorise(&1, &2, fn a, b -> rem(to_integer(a), to_integer(b)) end)},
           "'" => {:escape, fn x -> x end},
           # ()
-          "*" => {:normal, &vectorise(&1, &2, fn a, b -> IO.inspect(to_float(IO.inspect(a, label: "a")) * to_float(IO.inspect(b, label: "b")), label: "m") end)},
+          "*" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) * to_float(b) end)},
           "+" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) + to_float(b) end)},
           "," => {:normal, fn x -> IO.puts(x); x end},
           "-" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) - to_float(b) end)},
@@ -171,7 +171,7 @@ defmodule Catholicon do
               _ -> group
             end
           end},
-          "Ẹ" => {:normal, fn x -> cumulative_sum(to_list(x)) end},
+          "Ẹ" => {:normal, &vectorise_list(&1, fn a -> cumulative_sum(to_list(a)) end)},
           "F̣" => {:normal, fn x -> Enum.flat_map(to_list(x), fn a -> a end) end},
           "G̣" => {:escape, fn x, y -> Enum.reduce(x, fn a, b ->
             Variables.put("loop", a)
@@ -205,12 +205,10 @@ defmodule Catholicon do
   end
 
   defp do_eval(:normal, "\\" <> args, fallback_fun) do
-    IO.inspect args
     {[first, second], leftover} = do_eval(:normal, args, fallback_fun)
     {first, {:two_arg, second, leftover}}
   end
   defp do_eval(_, {:two_arg, second, args}, _) do
-    IO.inspect {:two_arg, second, args}
     {second, args}
   end
   defp do_eval(:normal, args, fallback_fun), do: eval(args, fallback_fun)
