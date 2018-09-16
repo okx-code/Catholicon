@@ -163,11 +163,27 @@ defmodule Catholicon do
           "ẋ" => {:escape, fn x, y -> Loop.map(to_list(x), fn value -> eval_value(y, fn -> value end) end) end},
           "ẏ" => {:normal, &vectorise(&1, &2, fn a, b -> String.pad_leading(to_string(a), to_integer(b)) end)},
           "ż" => {:normal, &vectorise(&1, &2, fn a, b -> String.pad_trailing(to_string(a), to_integer(b)) end)},
-          # greek...
+          "Ạ" => {:normal, fn -> "abcdefghijklmnopqrstuvwxyz" end},
+          "Ḅ" => {:normal, fn -> "ABCDEFGHIJKLMNOPQRSTUVWXYZ" end},
+          "Ḍ" => {:normal, fn -> "bcdfghjklmnpqrstvwxyz" end},
+          "Ẹ" => {:normal, fn -> "aeiou" end},
+          # ḤỊḲḶṂṆỌṚṢṬỤṾẈỴẒạḅḍẹḥịḳḷṃṇọṛṣṭụṿẉỵẓ
+          "Γ" => {:normal, &vectorise(&1, fn a ->
+            cond do
+              is_list(&2) and is_list(&3) -> Enum.reduce(Enum.zip(&2, &3), to_string(a), fn {b, c}, acc -> String.replace(acc, to_string(b), to_string(c)) end)
+              is_list(&2) -> Enum.reduce(&2, to_string(a), fn b, acc -> String.replace(acc, to_string(b), to_string(&3)) end)
+              is_list(&3) -> Enum.reduce(&3, to_string(a), fn c, acc -> String.replace(acc, to_string(c), to_string(&2)) end)
+              true -> String.replace(a, to_string(&2), to_string(&3))
+            end
+          end)},
+          #ΔΘΛΞΠΣΦΨΩαβγδεζηθικλμνξπρστυφχψω
           "Ǎ" => {:normal, &vectorise(&1, fn a -> factorial(to_float(a)) end)},
           "Č" => {:normal, &vectorise(&1, &2, fn a, b -> max(to_float(a), to_float(b)) end)},
           "Ď" => {:normal, &vectorise(&1, &2, fn a, b -> min(to_float(a), to_float(b)) end)},
-          "Ě" => {:normal, &vectorise(&1, &2, fn a, b -> :math.pow(to_float(a), to_float(b)) end)},
+          "Ě" => {:normal, &vectorise(&1, &2, fn a, b ->
+            result = :math.pow(to_float(a), to_float(b))
+            if result == round(result), do: round(result), else: result
+           end)},
           "Ǧ" => {:normal, &vectorise(&1, fn a -> trunc(:math.sqrt(to_float(a))) end)},
           "Ǐ" => {:normal, &vectorise(&1, &2, fn a, b -> lcm(to_integer(a), to_integer(b)) end)},
           "Ǩ" => {:normal, &vectorise(&1, fn a -> Base.decode16!(to_string(a), case: :mixed) end)},
@@ -203,7 +219,8 @@ defmodule Catholicon do
           "ǒ" => {:normal, fn x, y -> Enum.flat_map(to_list(x), fn a -> List.duplicate(a, to_integer(y)) end) end},
           "ř" => {:normal, fn x -> Enum.map(to_list(x), &length/1) end},
           "š" => {:normal, fn x, y -> vectorise(IO.inspect(if is_list(y), do: Enum.uniq(y), else: y), &Enum.count(to_list(x), fn a -> a == &1 end)) end},
-          # ťǔž
+          "ť" => {:normal, &vectorise(&1, fn a -> String.graphemes(a) end)},
+          # ǔž
           "‰" => {:normal, &vectorise(&1, fn a -> a / 1000 end)},
           "≤" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) <= to_float(b) end)},
           "≥" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) >= to_float(b) end)},
@@ -215,6 +232,11 @@ defmodule Catholicon do
         }[fun_name]
 
         debug((case get_arity(fun) do
+          3 ->
+            {eval1, leftover1} = do_eval(:normal, args, fallback_fun)
+            {eval2, leftover2} = do_eval(type, leftover1, fallback_fun)
+            {eval3, leftover3} = do_eval(type, leftover2, fallback_fun)
+            {fun.(eval1, eval2, eval3), leftover3}
           2 ->
             if type == :two_char do
               {char, rest} = String.next_grapheme(args)
