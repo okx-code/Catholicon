@@ -121,9 +121,9 @@ defmodule Catholicon do
           "*" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) * to_float(b) end)},
           "+" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) + to_float(b) end)},
           "," => {:normal, &vectorise(&1, fn a -> to_float(a) * 1000 end)},
-          "-" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) - to_float(b) end)},
+          "-" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(b) - to_float(a) end)},
           "." => {:normal, &vectorise(&1, fn a -> to_float(a) / 100 end)},
-          "/" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) / to_float(b) end)},
+          "/" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(b) / to_float(a) end)},
           ":" => {:normal, fn x, y -> to_list(x) ++ to_list(y) end},
           ";" => {:normal, fn x, y -> to_list(x) -- to_list(y) end},
           "<" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) < to_float(b) end)},
@@ -170,7 +170,11 @@ defmodule Catholicon do
           # ḤỊḲḶṂṆỌṚṢṬỤṾẈỴẒạḅḍẹḥịḳḷṃṇọṛṣṭụṿẉỵẓ
           "Γ" => {:normal, &vectorise(&1, fn a ->
             cond do
-              is_list(&2) and is_list(&3) -> Enum.reduce(Enum.zip(&2, &3), to_string(a), fn {b, c}, acc -> String.replace(acc, to_string(b), to_string(c)) end)
+              is_list(&2) and is_list(&3) ->
+                Enum.join(Enum.map(String.graphemes(to_string(a)), fn x ->
+                  {_, y} = Enum.find(Enum.zip(&2, &3), {x, x}, fn {y, _} -> if x == y, do: true, else: false end)
+                  y
+                end))
               is_list(&2) -> Enum.reduce(&2, to_string(a), fn b, acc -> String.replace(acc, to_string(b), to_string(&3)) end)
               is_list(&3) -> Enum.reduce(&3, to_string(a), fn c, acc -> String.replace(acc, to_string(c), to_string(&2)) end)
               true -> String.replace(a, to_string(&2), to_string(&3))
