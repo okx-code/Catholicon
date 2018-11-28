@@ -29,7 +29,7 @@ defmodule Loop do
   defp loop(set), do: Variables.put("loop", set)
 
   def nth_that_matches(fun, v, req, count \\ 0) do
-    if fun.(v) do
+    if Catholicon.to_boolean(fun.(v)) do
       if count == req do
         v
       else

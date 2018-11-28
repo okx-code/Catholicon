@@ -192,7 +192,9 @@ defmodule Catholicon do
           "Č" => {:normal, &vectorise(&1, &2, fn a, b -> max(to_float(a), to_float(b)) end)},
           "Ď" => {:normal, &vectorise(&1, &2, fn a, b -> min(to_float(a), to_float(b)) end)},
           "Ě" => {:normal, &vectorise(&1, &2, fn a, b ->
-            result = :math.pow(to_float(a), to_float(b))
+            a = to_float(a)
+            b = to_float(b)
+            result = if b == round(b), do: int_pow(a, b), else: :math.pow(a, b)
             if result == round(result), do: round(result), else: result
            end)},
           "Ǧ" => {:normal, &vectorise(&1, fn a -> trunc(:math.sqrt(to_float(a))) end)},
@@ -203,7 +205,7 @@ defmodule Catholicon do
           "Ǒ" => {:normal, &vectorise(&1, fn a -> Base.encode32(to_string(a)) end)},
           "Ř" => {:normal, &vectorise(&1, fn a -> Base.decode64!(to_string(a), case: :mixed, padding: false) end)},
           "Š" => {:normal, &vectorise(&1, fn a -> Base.encode64(to_string(a)) end)},
-          # "Ť"
+          "Ť" => {:normal, fn a -> Enum.reverse(to_list(a)) end},
           "Ǔ" => {:normal, &vectorise(&1, fn a -> to_float(a) * 2 end)},
           "Ž" => {:normal, fn x, y -> vectorise(x, fn a -> Enum.at(y, to_integer(a)) end) end},
           "ǎ" => {:normal, fn x ->
@@ -231,7 +233,7 @@ defmodule Catholicon do
           "ř" => {:normal, fn x -> Enum.map(to_list(x), &length/1) end},
           "š" => {:normal, fn x, y -> vectorise((if is_list(y), do: Enum.uniq(y), else: y), &Enum.count(to_list(x), fn a -> a == &1 end)) end},
           "ť" => {:normal, &vectorise(&1, fn a -> String.graphemes(a) end)},
-          "ǔ" => {:normal, &vectorise(&1, &2, fn a, b -> String.contains?(to_string(a), to_string(b)) end)},
+          "ǔ" => {:normal, &vectorise(&1, &2, fn a, b -> String.contains?(to_string(b), to_string(a)) end)},
           # ž
           "‰" => {:normal, &vectorise(&1, fn a -> a / 1000 end)},
           "≤" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) <= to_float(b) end)},
@@ -320,6 +322,16 @@ defmodule Catholicon do
       value
     rescue
       _ -> string
+    end
+  end
+
+  def int_pow(x, y), do: do_int_pow(x, x, y)
+  defp do_int_pow(ox, x, y) do
+    case y do
+      0 -> 1
+      1 -> x
+      z when z < 0 -> :math.pow(x, y)
+      _ -> do_int_pow(ox, x * ox, y - 1)
     end
   end
 
