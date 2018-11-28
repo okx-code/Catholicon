@@ -27,4 +27,16 @@ defmodule Loop do
   end
 
   defp loop(set), do: Variables.put("loop", set)
+
+  def nth_that_matches(fun, v, req, count \\ 0) do
+    if fun.(v) do
+      if count == req do
+        v
+      else
+        nth_that_matches(fun, v + 1, req, count + 1)
+      end
+    else
+      nth_that_matches(fun, v + 1, req, count)
+    end
+  end
 end

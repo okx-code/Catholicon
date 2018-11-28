@@ -4,9 +4,9 @@ defmodule Catholicon do
 
   def main(args) do
     Variables.start_link()
-    Variables.put("number", 0)
-    Variables.put("loop", 1)
-    Variables.put("A", 2)
+    Variables.put("number", 36)
+    Variables.put("loop", -1)
+    Variables.put("A", 16)
     Input.start_link()
 
     256 = String.length(@table)
@@ -180,7 +180,14 @@ defmodule Catholicon do
               true -> String.replace(a, to_string(&2), to_string(&3))
             end
           end)},
-          #ΔΘΛΞΠΣΦΨΩαβγδεζηθικλμνξπρστυφχψω
+          #ΔΘΛΞΠΣΦΨΩαβγδεζηθικλμνξ
+          "π" => {:normal, fn -> :math.pi end},
+          "ρ" => {:escape, &vectorise(&1, fn a -> Loop.nth_that_matches(fun(&2), 0, a) end)},
+          "σ" => {:escape, &vectorise(&1, fn a -> Loop.nth_that_matches(fun(&2), 1, a) end)},
+          "τ" => {:normal, fn -> :math.pi * 2 end},
+          #υ
+          "φ" => {:normal, fn -> 1.618033988749895 end},
+          #χψω
           "Ǎ" => {:normal, &vectorise(&1, fn a -> factorial(to_float(a)) end)},
           "Č" => {:normal, &vectorise(&1, &2, fn a, b -> max(to_float(a), to_float(b)) end)},
           "Ď" => {:normal, &vectorise(&1, &2, fn a, b -> min(to_float(a), to_float(b)) end)},
@@ -219,12 +226,13 @@ defmodule Catholicon do
           "ǰ" => {:normal, &Enum.map(Enum.zip(Enum.reverse(tl(Enum.reverse(to_list(&1)))), tl(to_list(&1))), fn {a, b} -> b - a end)},
           "ǩ" => {:normal, fn x -> Enum.reduce(to_list(x), &max/2) end},
           "ľ" => {:normal, fn x -> Enum.reduce(to_list(x), &min/2) end},
-          "ň" => {:two_char, fn x, y -> Loop.map(to_list(y), fn value -> eval_value(x, fn -> value end) end) end},
+          "ň" => {:two_char, fn x, y -> Loop.map(to_list(y), fun(x)) end},
           "ǒ" => {:normal, fn x, y -> Enum.flat_map(to_list(x), fn a -> List.duplicate(a, to_integer(y)) end) end},
           "ř" => {:normal, fn x -> Enum.map(to_list(x), &length/1) end},
-          "š" => {:normal, fn x, y -> vectorise(IO.inspect(if is_list(y), do: Enum.uniq(y), else: y), &Enum.count(to_list(x), fn a -> a == &1 end)) end},
+          "š" => {:normal, fn x, y -> vectorise((if is_list(y), do: Enum.uniq(y), else: y), &Enum.count(to_list(x), fn a -> a == &1 end)) end},
           "ť" => {:normal, &vectorise(&1, fn a -> String.graphemes(a) end)},
-          # ǔž
+          "ǔ" => {:normal, &vectorise(&1, &2, fn a, b -> String.contains?(to_string(a), to_string(b)) end)},
+          # ž
           "‰" => {:normal, &vectorise(&1, fn a -> a / 1000 end)},
           "≤" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) <= to_float(b) end)},
           "≥" => {:normal, &vectorise(&1, &2, fn a, b -> to_float(a) >= to_float(b) end)},
@@ -278,6 +286,10 @@ defmodule Catholicon do
     end
   end
 
+  defp fun(str) do
+    fn value -> eval_value(str, fn -> value end) end
+  end
+
   defp eval_value(args, fallback_fun \\ &Input.get_input/0) do
     {value, _leftover} = eval(args, fallback_fun)
     value
@@ -316,14 +328,14 @@ defmodule Catholicon do
   def to_integer(x) when is_binary(x), do: String.to_integer(x)
   def to_integer(true), do: 1
   def to_integer(false), do: 0
-  def to_integer(_), do: :error
+  def to_integer(_), do: 1
 
   def to_float_strict(x) when is_float(x), do: x
   def to_float_strict(x) when is_integer(x), do: to_float(Integer.to_string(x))
   def to_float_strict(x) when is_binary(x), do: String.to_float(x)
-  def to_float_strict(true), do: 1
-  def to_float_strict(false), do: 0
-  def to_float_strict(_), do: :error
+  def to_float_strict(true), do: 1.0
+  def to_float_strict(false), do: 0.0
+  def to_float_strict(_), do: 1.0
 
   def to_float(x) when is_float(x), do: x
   def to_float(x) when is_integer(x), do: x
@@ -335,7 +347,7 @@ defmodule Catholicon do
   end
   def to_float(true), do: 1
   def to_float(false), do: 0
-  def to_float(_), do: :error
+  def to_float(_), do: 1
 
   defp do_float_parse(x) do
     {x, ""} = Float.parse(x)
@@ -346,7 +358,7 @@ defmodule Catholicon do
   def to_list(x) when is_binary(x), do: String.graphemes(x)
   def to_list(x) when is_integer(x), do: Integer.digits(x)
   def to_list(x) when is_float(x), do: to_list(to_string(x))
-  def to_list(_), do: :error
+  def to_list(_), do: []
 
   def to_boolean(x) when x == 1 or x == "1", do: true
   def to_boolean(x) when x == 0 or x == "0", do: false
